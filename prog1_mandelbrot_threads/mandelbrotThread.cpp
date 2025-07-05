@@ -30,15 +30,33 @@ void workerThreadStart(WorkerArgs* const args) {
     // half of the image and thread 1 could compute the bottom half.
 
     printf("Hello world from thread %d\n", args->threadId);
+    // Approach 1:
     // numThreads = 2, threadId=0, threadId=1
     // height=100 -> threadId=0 0~49, threadId=1 50~99
-    int rows = args->height / args->numThreads;
-    int pos = rows * args->threadId;
-    if (args->threadId == args->numThreads - 1) {
-        rows = args->height - pos;
+
+    // int rows = args->height / args->numThreads;
+    // int pos = rows * args->threadId;
+    // if (args->threadId == args->numThreads - 1) {
+    //     rows = args->height - pos;
+    // }
+    // mandelbrotSerial(args->x0, args->y0, args->x1, args->y1, args->width, args->height, pos,
+    // rows,
+    //                  args->maxIterations, args->output);
+
+    // Approach 3: Process chunks of rows to reduce function call overhead
+    // Each thread processes multiple rows per mandelbrotSerial() call
+    // Use interleaved chunks for better load balancing
+    int chunkSize = 4;  // Process 4 rows at a time
+    int rowsToProcess = chunkSize;
+
+    for (int startRow = args->threadId * chunkSize; startRow < args->height;
+         startRow += args->numThreads * chunkSize) {
+        if (args->height - startRow < chunkSize) {
+            rowsToProcess = args->height - startRow;
+        }
+        mandelbrotSerial(args->x0, args->y0, args->x1, args->y1, args->width, args->height,
+                         startRow, rowsToProcess, args->maxIterations, args->output);
     }
-    mandelbrotSerial(args->x0, args->y0, args->x1, args->y1, args->width, args->height, pos, rows,
-                     args->maxIterations, args->output);
 }
 
 //
